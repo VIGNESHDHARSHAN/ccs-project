@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SHA-512 Integrity Shield</title>
+  <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div class="eyebrow"><span class="pulse"></span> File integrity monitor</div>
+      <h1>Image Integrity<br><em>Shield</em></h1>
+      <p class="intro">Register a trusted original, then compare any file against its cryptographic fingerprint.</p>
+    </header>
+    <section class="workspace" aria-label="File integrity controls">
+      <div class="reference panel">
+        <div class="panel-label">01 / Reference</div><h2>Set the original</h2>
+        <p>Choose the untouched file to create a SHA-512 reference digest.</p>
+        <form id="register-form"><label class="dropzone" for="register-file"><span class="upload-icon">+</span><strong>Choose original file</strong><small id="register-name">Any file type</small></label><input id="register-file" type="file" required><button class="button primary" type="submit">Register original <span>-></span></button></form>
+      </div>
+      <div class="verify panel">
+        <div class="panel-label">02 / Verify</div><h2>Check for changes</h2>
+        <p>Upload a copy to see whether its fingerprint still matches.</p>
+        <form id="verify-form"><label class="dropzone" for="verify-file"><span class="upload-icon">+</span><strong>Choose file to verify</strong><small id="verify-name">Any file type</small></label><input id="verify-file" type="file" required><button class="button secondary" type="submit">Verify integrity <span>-></span></button></form>
+      </div>
+    </section>
+    <section id="reference-status" class="reference-status" hidden><span class="status-dot"></span><span><b>Reference active</b><small id="reference-name"></small></span></section>
+    <section id="result" class="result" hidden aria-live="polite"><div id="result-mark" class="result-mark"></div><div class="result-copy"><div class="panel-label">Latest result</div><h2 id="result-title"></h2><p id="result-message"></p></div><code id="result-digest"></code></section>
+    <footer><span>SHA-512</span><span>Browser-only processing</span><span>No files uploaded</span></footer>
+  </main>
+  <script>
+    const state = { hash: sessionStorage.getItem('registeredHash'), name: sessionStorage.getItem('registeredName') };
+    const toHex = bytes => [...new Uint8Array(bytes)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+    async function digest(file) { return toHex(await crypto.subtle.digest('SHA-512', await file.arrayBuffer())); }
+    function showResult(kind, title, message, hash) {
+      const result = document.querySelector('#result'); result.className = `result ${kind}`; result.hidden = false;
+      document.querySelector('#result-mark').textContent = kind === 'authentic' ? 'OK' : kind === 'tampered' ? '!!' : '--';
+      document.querySelector('#result-title').textContent = title; document.querySelector('#result-message').textContent = message; document.querySelector('#result-digest').textContent = hash || '';
+    }
+    function updateName(input) { document.querySelector(`#${input.id.replace('-file', '-name')}`).textContent = input.files[0]?.name || 'Any file type'; }
+    document.querySelectorAll('input[type=file]').forEach(input => input.addEventListener('change', () => updateName(input)));
+    document.querySelector('#register-form').addEventListener('submit', async event => { event.preventDefault(); const file = document.querySelector('#register-file').files[0]; if (!file) return; state.hash = await digest(file); state.name = file.name; sessionStorage.setItem('registeredHash', state.hash); sessionStorage.setItem('registeredName', state.name); document.querySelector('#reference-status').hidden = false; document.querySelector('#reference-name').textContent = state.name; showResult('success', 'Original registered', `${state.name} is now your reference file.`, state.hash); });
+    document.querySelector('#verify-form').addEventListener('submit', async event => { event.preventDefault(); const file = document.querySelector('#verify-file').files[0]; if (!file) return; if (!state.hash) { showResult('error', 'Register an original first', 'Your reference digest is not set yet.'); return; } const hash = await digest(file); const authentic = hash === state.hash; showResult(authentic ? 'authentic' : 'tampered', authentic ? 'Authentic file' : 'Tampering detected', authentic ? 'The SHA-512 digest matches your reference.' : 'The SHA-512 digest does not match your reference.', hash); });
+    if (state.hash) { document.querySelector('#reference-status').hidden = false; document.querySelector('#reference-name').textContent = state.name; }
+  </script>
+</body>
+</html>

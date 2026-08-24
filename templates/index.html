@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SHA-512 Integrity Shield</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <div class="eyebrow"><span class="pulse"></span> File integrity monitor</div>
+      <h1>Image Integrity<br><em>Shield</em></h1>
+      <p class="intro">Register a trusted original, then compare any file against its cryptographic fingerprint.</p>
+    </header>
+
+    <section class="workspace" aria-label="File integrity controls">
+      <div class="reference panel">
+        <div class="panel-label">01 / Reference</div>
+        <h2>Set the original</h2>
+        <p>Choose the untouched file to create a SHA-512 reference digest.</p>
+        <form method="post" enctype="multipart/form-data">
+          <label class="dropzone" for="register-file">
+            <span class="upload-icon">+</span>
+            <strong>Choose original file</strong>
+            <small id="register-name">Any file type</small>
+          </label>
+          <input id="register-file" name="image" type="file" required>
+          <button class="button primary" type="submit" name="action" value="register">Register original <span>-></span></button>
+        </form>
+      </div>
+
+      <div class="verify panel">
+        <div class="panel-label">02 / Verify</div>
+        <h2>Check for changes</h2>
+        <p>Upload a copy to see whether its fingerprint still matches.</p>
+        <form method="post" enctype="multipart/form-data">
+          <label class="dropzone" for="verify-file">
+            <span class="upload-icon">+</span>
+            <strong>Choose file to verify</strong>
+            <small id="verify-name">Any file type</small>
+          </label>
+          <input id="verify-file" name="image" type="file" required>
+          <button class="button secondary" type="submit" name="action" value="verify">Verify integrity <span>-></span></button>
+        </form>
+      </div>
+    </section>
+
+    {% if registered_hash %}
+    <section class="reference-status">
+      <span class="status-dot"></span>
+      <span><b>Reference active</b><small>{{ registered_name }}</small></span>
+    </section>
+    {% endif %}
+
+    {% if result %}
+    <section class="result {{ result.kind }}" aria-live="polite">
+      <div class="result-mark">{% if result.kind == 'authentic' %}OK{% elif result.kind == 'tampered' %}!!{% else %}--{% endif %}</div>
+      <div class="result-copy"><div class="panel-label">Latest result</div><h2>{{ result.title }}</h2><p>{{ result.message }}</p></div>
+      {% if result.digest %}<code>{{ result.digest }}</code>{% endif %}
+    </section>
+    {% endif %}
+
+    <footer><span>SHA-512</span><span>Local session storage</span><span>Chunked file reading</span></footer>
+  </main>
+  <script>
+    document.querySelectorAll('input[type="file"]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        var target = document.getElementById(input.id.replace('-file', '-name'));
+        target.textContent = input.files[0] ? input.files[0].name : 'Any file type';
+      });
+    });
+  </script>
+</body>
+</html>
